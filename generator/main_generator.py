@@ -103,29 +103,33 @@ with st.sidebar:
 
     seed = st.number_input("Seed", 0, 999999, 42)
 
-if st.sidebar.button("GENERATE DATA", type="primary"):
-    gen = MiningDataGenerator(mines, start_date, days, means, stds,
-                              correlation, daily_growth, dow_dict, events, seed)
-    df = gen.generate()
-    os.makedirs("../data", exist_ok=True)
-    df.to_excel("../data/mining_data_latest.xlsx")
-    st.session_state.df = df
-
-if "df" in st.session_state:
-    df = st.session_state.df
-    fig = px.line(df.reset_index().melt(id_vars="Date", var_name="Mine", value_name="Output"),
-                  x="Date", y="Output", color="Mine", title="Daily Mining Output")
-    fig.update_layout(height=600)
-    st.plotly_chart(fig, use_container_width=True)
-
-    col1, col2 = st.columns([1,3])
-    with col1:
-        st.metric("Records", len(df))
-        st.metric("Total output", f"{df.sum().sum():,.0f} tons")
-        st.download_button("Download Excel", 
-                           df.to_excel(index=True).encode(),
-                           f"mining_{datetime.now():%Y%m%d_%H%M}.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    st.success("Data saved → data/mining_data_latest.xlsx")
-else:
-    st.info("Set parameters and click GENERATE DATA")
+if st.button("GENERATE DATA", type="primary"):
+    with st.spinner("Generating realistic mining data..."):
+        df = generate_mining_data(
+            start_date=start_date,
+            end_date=end_date,
+            mines=mines_list,
+            base_output=base_output,
+            growth_rate=growth_rate / 365,
+            correlation=corr_level,
+            events=events_list,
+            weekend_factor=weekend_factor,
+            day_factors=day_factors
+        )
+        
+        buffer = BytesIO()
+        df.to_excel(buffer, index_label="Date")
+        buffer.seek(0)
+        
+        st.success(f"Generated {len(df)} days of data for {len(df.columns)} mines!")
+        st.download_button(
+            label="Download mining_data_latest.xlsx",
+            data=buffer.getvalue(),
+            file_name="mining_data_latest.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+        # Сохраняем локально (для дашборда)
+        os.makedirs("data", exist_ok=True)
+        df.to_excel("data/mining_data_latest.xlsx", index_label="Date")
+        st.balloons()
