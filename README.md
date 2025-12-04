@@ -7,8 +7,8 @@ Two independent Streamlit web apps:
 
 
 ### Live Apps
-- Data Generator → https://[your-name]-generator.streamlit.app *(fill after deploy)*
-- Analytics Dashboard → https://[your-name].streamlit.app *(fill after deploy)*
+- Data Generator → https://mining-analytics-9zx3kowthklnh627eabre4.streamlit.app/
+- Analytics Dashboard → https://mining-analytics-hec4sprj8zq7xs9e8ftduz.streamlit.app/
 
 ### Features
 - Realistic data (not white noise): correlations, day-of-week patterns, overall trend, random events
