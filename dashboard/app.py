@@ -5,12 +5,11 @@ import plotly.graph_objects as go
 from datetime import datetime
 from io import BytesIO
 
-# ------------------- ЗАГРУЗКА ДАННЫХ -------------------
 st.set_page_config(page_title="Weyland-Yutani Mining", layout="wide")
 st.title("Weyland-Yutani Corporation")
 st.markdown("### Mining Operations Analytics Dashboard")
 
-st.info("**Как пользоваться:**\n1. Откройте [Генератор](https://your-generator-link) → нажмите GENERATE → скачайте файл\n2. Перетащите его сюда")
+st.info("**Как пользоваться:**\n1. Сгенерируйте данные в Генераторе → скачайте файл\n2. Перетащите его сюда")
 
 uploaded_file = st.file_uploader("Drop **mining_data_latest.xlsx** here", type=["xlsx"])
 if not uploaded_file:
@@ -20,7 +19,7 @@ df = pd.read_excel(uploaded_file, index_col="Date")
 df.index = pd.to_datetime(df.index)
 st.success(f"Данные загружены: {len(df)} дней × {len(df.columns)} шахт")
 
-# ------------------- ФУНКЦИИ -------------------
+
 def get_stats(df):
     stats = []
     for col in df.columns:
@@ -57,7 +56,7 @@ def find_anomalies(df, iqr_k=1.5, z_thr=3.0, ma_win=7, ma_pct=30):
                 out.append({"Date": date.date(), "Mine": mine, "Value": round(val,1), "Method": "MA %"})
     return pd.DataFrame(out)
 
-def make_chart(df, kind, poly_deg, anomalies, for_pdf=False):
+def make_chart(df, kind, poly_deg, anomalies):
     fig = go.Figure()
     for mine in df.columns:
         if kind == "line":
@@ -80,15 +79,10 @@ def make_chart(df, kind, poly_deg, anomalies, for_pdf=False):
                                  marker=dict(color="red", size=16, symbol="x", line=dict(width=3, color="darkred")),
                                  name="Anomaly"))
 
-    fig.update_layout(
-        height=700,
-        template="plotly_white" if for_pdf else None,   # белый фон для PDF
-        title="Daily Mining Output" if not for_pdf else None,
-        legend=dict(orientation="h")
-    )
+    fig.update_layout(height=700, template="plotly_white", title="Daily Mining Output", legend=dict(orientation="h"))
     return fig
 
-# ------------------- ИНТЕРФЕЙС -------------------
+
 st.sidebar.header("Anomaly Detection")
 iqr_k   = st.sidebar.slider("IQR multiplier", 1.0, 5.0, 1.5, 0.1)
 z_thr   = st.sidebar.slider("Z-score threshold", 2.0, 5.0, 3.0, 0.1)
@@ -117,9 +111,9 @@ if not anomalies_df.empty:
     st.markdown("### Detected Anomalies")
     st.dataframe(anomalies_df.sort_values("Date").reset_index(drop=True))
 
-# ------------------- PDF — 100% РАБОЧИЙ НА STREAMLIT CLOUD -------------------
+
 if st.button("Generate PDF Report", type="primary"):
-    with st.spinner("Создаём красивый PDF..."):
+    with st.spinner("Генерация PDF..."):
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
@@ -127,37 +121,40 @@ if st.button("Generate PDF Report", type="primary"):
         from reportlab.lib.styles import getSampleStyleSheet
 
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=60, bottomMargin=50)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=60)
         styles = getSampleStyleSheet()
         story = []
 
         story.append(Paragraph("Weyland-Yutani Corporation", styles["Title"]))
         story.append(Paragraph(f"Mining Report — {datetime.now():%Y-%m-%d %H:%M}", styles["Heading2"]))
-        story.append(Spacer(1, 20))
+        story.append(Spacer(1, 30))
 
-        # Статистика
+       
         data = [stats_df.columns.tolist()] + stats_df.round(1).values.tolist()
         t = Table(data)
         t.setStyle(TableStyle([
             ('BACKGROUND',(0,0),(-1,0),colors.HexColor("#0b5394")),
             ('TEXTCOLOR',(0,0),(-1,0),colors.white),
-            ('GRID',(0,0),(-1,-1),1,colors.grey),
+            ('GRID',(0,0),(-1,-1),0.5,colors.grey),
             ('BACKGROUND',(0,1),(-1,-1),colors.HexColor("#f8f8f8"))
         ]))
         story.append(t)
         story.append(Spacer(1, 30))
 
-        # Главный график (белый фон)
-        img1 = make_chart(df, chart_kind, poly_deg, pd.DataFrame(), for_pdf=True).write_image(format="png")
+        
+        main_fig = make_chart(df, chart_kind, poly_deg, pd.DataFrame())
+        main_fig.update_layout(template="plotly_white")
+        img1 = main_fig.to_image(format="png", engine="kaleido")
         story.append(Image(BytesIO(img1), width=7.5*inch, height=4.5*inch))
 
-        # Аномалии
         if not anomalies_df.empty:
             story.append(Spacer(1, 30))
             story.append(Paragraph(f"Anomalies Detected ({len(anomalies_df)})", styles["Heading2"]))
             anom_data = [anomalies_df.columns.tolist()] + anomalies_df.values.tolist()
             story.append(Table(anom_data))
-            img2 = make_chart(df, chart_kind, 1, anomalies_df, for_pdf=True).write_image(format="png")
+            anom_fig = make_chart(df, chart_kind, 1, anomalies_df)
+            anom_fig.update_layout(template="plotly_white")
+            img2 = anom_fig.to_image(format="png", engine="kaleido")
             story.append(Image(BytesIO(img2), width=7.5*inch, height=4.5*inch))
 
         doc.build(story)
@@ -170,6 +167,7 @@ if st.button("Generate PDF Report", type="primary"):
         file_name=f"WeylandYutani_Report_{datetime.now():%Y%m%d_%H%M}.pdf",
         mime="application/pdf"
     )
-    st.success("PDF готов — красивый и белый!")
+    st.success("PDF готов — белый, красивый, работает везде!")
+    st.balloons()
 
 st.balloons()
