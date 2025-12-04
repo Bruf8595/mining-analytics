@@ -82,7 +82,6 @@ def make_chart(df, kind, poly_deg, anomalies):
     fig.update_layout(height=700, template="plotly_white", title="Daily Mining Output", legend=dict(orientation="h"))
     return fig
 
-
 st.sidebar.header("Anomaly Detection")
 iqr_k   = st.sidebar.slider("IQR multiplier", 1.0, 5.0, 1.5, 0.1)
 z_thr   = st.sidebar.slider("Z-score threshold", 2.0, 5.0, 3.0, 0.1)
@@ -129,7 +128,7 @@ if st.button("Generate PDF Report", type="primary"):
         story.append(Paragraph(f"Mining Report — {datetime.now():%Y-%m-%d %H:%M}", styles["Heading2"]))
         story.append(Spacer(1, 30))
 
-       
+
         data = [stats_df.columns.tolist()] + stats_df.round(1).values.tolist()
         t = Table(data)
         t.setStyle(TableStyle([
@@ -141,7 +140,7 @@ if st.button("Generate PDF Report", type="primary"):
         story.append(t)
         story.append(Spacer(1, 30))
 
-        
+
         main_fig = make_chart(df, chart_kind, poly_deg, pd.DataFrame())
         main_fig.update_layout(template="plotly_white")
         img1 = main_fig.to_image(format="png", engine="kaleido")
