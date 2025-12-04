@@ -9,12 +9,12 @@ from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.lib.styles import getSampleStyleSheet
 
-# ==================== ЗАГРУЗКА ДАННЫХ ====================
+
 st.set_page_config(page_title="Weyland-Yutani Mining", layout="wide")
 st.title("Weyland-Yutani Corporation")
 st.markdown("### Mining Operations Analytics Dashboard")
 
-st.info("Сгенерируйте данные в Генераторе → скачайте файл → перетащите его сюда")
+st.info("Generate data in the Generator → download the file → drag it here")
 
 uploaded_file = st.file_uploader("mining_data_latest.xlsx", type=["xlsx"])
 if not uploaded_file:
@@ -22,9 +22,9 @@ if not uploaded_file:
 
 df = pd.read_excel(uploaded_file, index_col="Date")
 df.index = pd.to_datetime(df.index)
-st.success(f"Данные загружены: {len(df)} дней × {len(df.columns)} шахт")
+st.success(f"Data loaded: {len(df)} days × {len(df.columns)} mines")
 
-# ==================== СТАТИСТИКА ====================
+
 def get_stats(df):
     stats = []
     for col in df.columns:
@@ -41,7 +41,7 @@ def get_stats(df):
         })
     return pd.DataFrame(stats)
 
-# ==================== АНОМАЛИИ ====================
+
 def find_anomalies(df, iqr_k=1.5, z_thr=3.0, ma_win=7, ma_pct=30):
     out = []
     ma = df.rolling(ma_win).mean()
@@ -62,7 +62,7 @@ def find_anomalies(df, iqr_k=1.5, z_thr=3.0, ma_win=7, ma_pct=30):
                 out.append({"Date": date.date(), "Mine": mine, "Value": round(val,1), "Method": "MA %"})
     return pd.DataFrame(out)
 
-# ==================== ИНТЕРФЕЙС ====================
+
 st.sidebar.header("Anomaly Detection")
 iqr_k  = st.sidebar.slider("IQR multiplier", 1.0, 5.0, 1.5, 0.1)
 z_thr  = st.sidebar.slider("Z-score threshold", 2.0, 5.0, 3.0, 0.1)
@@ -88,7 +88,7 @@ if not anomalies_df.empty:
     st.markdown("### Detected Anomalies")
     st.dataframe(anomalies_df.sort_values("Date"))
 
-# ==================== PDF — 100% РАБОЧИЙ БЕЗ KALEIDO ====================
+
 if st.button("Generate PDF Report", type="primary"):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=60)
@@ -123,19 +123,19 @@ if st.button("Generate PDF Report", type="primary"):
         story.append(t2)
 
     story.append(Spacer(1, 50))
-    story.append(Paragraph("© 2025 Weyland-Yutani Corp. Building Better Worlds.", styles["Normal"]))
+    story.append(Paragraph(" 2025 Weyland-Yutani Corp. Building Better Worlds.", styles["Normal"]))
 
     doc.build(story)
     pdf = buffer.getvalue()
     buffer.close()
 
     st.download_button(
-        "Скачать PDF-отчёт",
+        "Download the PDF report",
         data=pdf,
         file_name=f"WeylandYutani_Report_{datetime.now():%Y%m%d_%H%M}.pdf",
         mime="application/pdf"
     )
-    st.success("PDF готов — чистый, профессиональный, работает везде!")
+    st.success("Complete")
     st.balloons()
 
 st.balloons()
